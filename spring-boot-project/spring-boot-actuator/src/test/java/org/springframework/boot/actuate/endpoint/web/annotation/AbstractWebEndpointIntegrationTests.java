@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +61,7 @@ import static org.mockito.Mockito.verify;
  *
  * @param <T> the type of application context used by the tests
  * @author Andy Wilkinson
+ * @author Scott Frederick
  */
 public abstract class AbstractWebEndpointIntegrationTests<T extends ConfigurableApplicationContext & AnnotationConfigRegistry> {
 
@@ -179,7 +180,7 @@ public abstract class AbstractWebEndpointIntegrationTests<T extends Configurable
 			Map<String, Object> body = new HashMap<>();
 			body.put("foo", "one");
 			body.put("bar", "two");
-			client.post().uri("/test").body(body).exchange().expectStatus().isNoContent().expectBody().isEmpty();
+			client.post().uri("/test").bodyValue(body).exchange().expectStatus().isNoContent().expectBody().isEmpty();
 		});
 	}
 
@@ -210,7 +211,7 @@ public abstract class AbstractWebEndpointIntegrationTests<T extends Configurable
 		load(TestEndpointConfiguration.class, (context, client) -> {
 			Map<String, Object> body = new HashMap<>();
 			body.put("foo", "one");
-			client.post().uri("/test").body(body).exchange().expectStatus().isNoContent().expectBody().isEmpty();
+			client.post().uri("/test").bodyValue(body).exchange().expectStatus().isNoContent().expectBody().isEmpty();
 			verify(context.getBean(EndpointDelegate.class)).write("one", null);
 		});
 	}
@@ -409,8 +410,10 @@ public abstract class AbstractWebEndpointIntegrationTests<T extends Configurable
 			BiConsumer<ApplicationContext, WebTestClient> consumer) {
 		T applicationContext = this.applicationContextSupplier.get();
 		contextCustomizer.accept(applicationContext);
-		applicationContext.getEnvironment().getPropertySources()
-				.addLast(new MapPropertySource("test", Collections.singletonMap("endpointPath", endpointPath)));
+		Map<String, Object> properties = new HashMap<>();
+		properties.put("endpointPath", endpointPath);
+		properties.put("server.error.include-message", "always");
+		applicationContext.getEnvironment().getPropertySources().addLast(new MapPropertySource("test", properties));
 		applicationContext.refresh();
 		try {
 			InetSocketAddress address = new InetSocketAddress(getPort(applicationContext));

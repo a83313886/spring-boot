@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,15 +44,18 @@ class TypeElementMembers {
 
 	private final MetadataGenerationEnvironment env;
 
+	private final TypeElement targetType;
+
 	private final Map<String, VariableElement> fields = new LinkedHashMap<>();
 
 	private final Map<String, ExecutableElement> publicGetters = new LinkedHashMap<>();
 
 	private final Map<String, List<ExecutableElement>> publicSetters = new LinkedHashMap<>();
 
-	TypeElementMembers(MetadataGenerationEnvironment env, TypeElement element) {
+	TypeElementMembers(MetadataGenerationEnvironment env, TypeElement targetType) {
 		this.env = env;
-		process(element);
+		this.targetType = targetType;
+		process(targetType);
 	}
 
 	private void process(TypeElement element) {
@@ -71,7 +74,7 @@ class TypeElementMembers {
 	private void processMethod(ExecutableElement method) {
 		if (isPublic(method)) {
 			String name = method.getSimpleName().toString();
-			if (isGetter(method) && !this.publicGetters.containsKey(name)) {
+			if (isGetter(method) && !this.publicGetters.containsKey(getAccessorName(name))) {
 				this.publicGetters.put(getAccessorName(name), method);
 			}
 			else if (isSetter(method)) {
@@ -116,8 +119,19 @@ class TypeElementMembers {
 
 	private boolean isSetterReturnType(ExecutableElement method) {
 		TypeMirror returnType = method.getReturnType();
-		return (TypeKind.VOID == returnType.getKind()
-				|| this.env.getTypeUtils().isSameType(method.getEnclosingElement().asType(), returnType));
+		if (TypeKind.VOID == returnType.getKind()) {
+			return true;
+		}
+		if (TypeKind.DECLARED == returnType.getKind()
+				&& this.env.getTypeUtils().isSameType(method.getEnclosingElement().asType(), returnType)) {
+			return true;
+		}
+		if (TypeKind.TYPEVAR == returnType.getKind()) {
+			String resolvedType = this.env.getTypeUtils().getType(this.targetType, returnType);
+			return (resolvedType != null
+					&& resolvedType.equals(this.env.getTypeUtils().getQualifiedName(this.targetType)));
+		}
+		return false;
 	}
 
 	private String getAccessorName(String methodName) {

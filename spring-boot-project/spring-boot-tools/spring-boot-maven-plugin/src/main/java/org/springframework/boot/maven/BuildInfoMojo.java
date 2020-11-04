@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.springframework.boot.maven;
 
 import java.io.File;
 import java.time.Instant;
+import java.util.Date;
 import java.util.Map;
 
 import org.apache.maven.execution.MavenSession;
@@ -61,7 +62,7 @@ public class BuildInfoMojo extends AbstractMojo {
 	private MavenProject project;
 
 	/**
-	 * The location of the generated build-info.properties.
+	 * The location of the generated {@code build-info.properties} file.
 	 */
 	@Parameter(defaultValue = "${project.build.outputDirectory}/META-INF/build-info.properties")
 	private File outputFile;
@@ -76,8 +77,8 @@ public class BuildInfoMojo extends AbstractMojo {
 	private String time;
 
 	/**
-	 * Additional properties to store in the build-info.properties. Each entry is prefixed
-	 * by {@code build.} in the generated build-info.properties.
+	 * Additional properties to store in the {@code build-info.properties} file. Each
+	 * entry is prefixed by {@code build.} in the generated {@code build-info.properties}.
 	 */
 	@Parameter
 	private Map<String, String> additionalProperties;
@@ -100,7 +101,8 @@ public class BuildInfoMojo extends AbstractMojo {
 
 	private Instant getBuildTime() {
 		if (this.time == null || this.time.isEmpty()) {
-			return this.session.getRequest().getStartTime().toInstant();
+			Date startTime = this.session.getRequest().getStartTime();
+			return (startTime != null) ? startTime.toInstant() : Instant.now();
 		}
 		if ("off".equalsIgnoreCase(this.time)) {
 			return null;
